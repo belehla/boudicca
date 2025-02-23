@@ -91,12 +91,8 @@ class EventService @Autowired constructor(
         if (!searchDTO.category.isNullOrBlank() && searchDTO.category != SEARCH_TYPE_ALL) {
             queryParts.add(equals(SemanticKeys.CATEGORY, searchDTO.category!!))
         }
-        if (!searchDTO.locationCity.isNullOrBlank()) {
-            queryParts.add(equals(SemanticKeys.LOCATION_CITY, searchDTO.locationCity!!))
-        }
-        if (!searchDTO.locationName.isNullOrBlank()) {
-            queryParts.add(equals(SemanticKeys.LOCATION_NAME, searchDTO.locationName!!))
-        }
+        addSubqueryOfFieldConnectedByOr(queryParts, SemanticKeys.LOCATION_CITY, searchDTO.locationCities)
+        addSubqueryOfFieldConnectedByOr(queryParts, SemanticKeys.LOCATION_NAME, searchDTO.locationNames)
         if (!searchDTO.fromDate.isNullOrBlank()) {
             queryParts.add(after(SemanticKeys.STARTDATE, LocalDate.parse(searchDTO.fromDate!!, localDateFormatter)))
         }
@@ -112,9 +108,7 @@ class EventService @Autowired constructor(
         for (flag in (searchDTO.flags ?: emptyList()).filter { !it.isNullOrBlank() }) {
             queryParts.add(equals(flag!!, "true"))
         }
-        if (!searchDTO.bandName.isNullOrBlank()) {
-            queryParts.add(equals(SemanticKeys.CONCERT_BANDLIST, searchDTO.bandName!!))
-        }
+        addSubqueryOfFieldConnectedByOr(queryParts, SemanticKeys.CONCERT_BANDLIST, searchDTO.bandNames)
         if (searchDTO.includeRecurring != true) {
             queryParts.add(
                 or(
@@ -387,6 +381,17 @@ class EventService @Autowired constructor(
                 }
             })
         }
+    }
+
+    private fun addSubqueryOfFieldConnectedByOr(queryParts: MutableList<String>, semanticKeyField: String, searchInput: List<String?>?) : MutableList<String> {
+        val subqueryParts = mutableListOf<String>()
+        for (searchInputElement in (searchInput ?: emptyList()).filter { !it.isNullOrBlank() }) {
+            subqueryParts.add(equals(semanticKeyField, searchInputElement!!))
+        }
+        if(subqueryParts.isNotEmpty()) {
+            queryParts.add(or(subqueryParts))
+        }
+        return queryParts
     }
 
     data class Filters(
